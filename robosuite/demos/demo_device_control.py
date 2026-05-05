@@ -170,6 +170,9 @@ if __name__ == "__main__":
 
         device = Keyboard(env=env, pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
         env.viewer.add_keypress_callback(device.on_press)
+    elif args.device == "joystick":
+        from robosuite.devices.joystick import Joystick
+        device = Joystick(env=env, pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
     elif args.device == "spacemouse":
         from robosuite.devices import SpaceMouse
 

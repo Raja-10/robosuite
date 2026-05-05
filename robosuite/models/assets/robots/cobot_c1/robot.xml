@@ -1,0 +1,94 @@
+<?xml version="1.0" ?>
+<mujoco model="cobot_c1">
+  <compiler angle="radian"/>
+  
+  <actuator>
+    <!-- Physical limits of the actuator. -->
+    <motor ctrllimited="true" ctrlrange="-80.0 80.0" joint="shoulder_joint" name="torq_j1"/>
+    <motor ctrllimited="true" ctrlrange="-80.0 80.0" joint="arm_joint" name="torq_j2"/>
+    <motor ctrllimited="true" ctrlrange="-80.0 80.0" joint="forearm_joint" name="torq_j3"/>
+    <motor ctrllimited="true" ctrlrange="-80.0 80.0" joint="wrist1_joint" name="torq_j4"/>
+    <motor ctrllimited="true" ctrlrange="-80.0 80.0" joint="gripper_yaw_joint" name="torq_j5"/>
+    <motor ctrllimited="true" ctrlrange="-12.0 12.0" joint="gripper_roll_joint" name="torq_j6"/>
+  </actuator>
+
+
+  <asset>
+    <mesh name="base" file="meshes/base.STL"/>
+    <mesh name="shoulder" file="meshes/shoulder_link.STL"/>
+    <mesh name="arm" file="meshes/arm_link.STL"/>
+    <mesh name="forearm" file="meshes/forearm_link.STL"/>
+    <mesh name="wrist1" file="meshes/wrist1_link.STL"/>
+
+    <material name="robot_grey" rgba="0.6 0.6 0.6 1"/>
+    <material name="white" rgba="1 1 1 1"/>
+    <material name="black" rgba="0.25 0.25 0.25 1"/>
+    <material name="off_white" rgba="0.9 0.92 0.93 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2"/>
+
+    <body name="base">
+      <site name="right_center" pos="0 0 0" size="0.01" rgba="1 0.3 0.3 1" group="2"/>
+      <geom mesh="base" material="robot_grey" type="mesh" contype="0" conaffinity="0" group="1"/>
+      <body name="shoulder_link" pos="0 0 0.0641">
+        <inertial mass="1.127" pos="-0.0013 -0.0002 0.0433"
+                  quat="0.686 0.687 -0.168 0.171"
+                  diaginertia="0.00256 0.00253 0.00091"/>
+        <joint name="shoulder_joint" axis="0 0 1" range="-3.14 3.14"/>
+
+        <geom mesh="shoulder" type="mesh" contype="0" conaffinity="0" group="1" />
+        <body name="arm_link" pos="0 0 0.0449">
+          <inertial mass="0.281" pos="-0.123 0.0014 -0.0017"
+                    quat="0.495 0.514 0.487 0.503"
+                    diaginertia="0.00291 0.00288 8.7e-05"/>
+          <joint name="arm_joint" axis="0 -1 0" range="-3.14 0"/>
+
+          <geom mesh="arm" type="mesh" contype="0" conaffinity="0" group="1"/>
+          <body name="forearm_link" pos="-0.2915 0 0">
+            <inertial mass="0.346" pos="0.145 -0.0015 0.0369"
+                      quat="0.540 0.462 0.467 0.526"
+                      diaginertia="0.00568 0.00562 0.00012"/>
+            <joint name="forearm_joint" axis="0 -1 0" range="0 4.2"/>
+
+            <geom mesh="forearm" type="mesh" contype="0" conaffinity="0" group="1"/>
+            <body name="wrist1_link" pos="0.3085 -0.0015 0.0537">
+              <inertial pos="0.0173 0.00017 0"
+                        quat="0.499 0.501 -0.499 0.501"
+                        mass="0.03"
+                        diaginertia="8.5e-06 7.4e-06 2.0e-06"/>
+              <joint name="wrist1_joint" axis="0 -1 0"
+                    range="-1.85 1.95" damping="5"/>
+              
+              <!-- Gripper Yaw -->
+              <geom mesh="wrist1" type="mesh" contype="0" conaffinity="0" group="1"/>
+              <body name="gripper_yaw" pos="0.06 0 0">
+                <geom type="sphere" size="0.015" mass="0.01"/>
+                <joint name="gripper_yaw_joint"
+                      axis="0 0 1"
+                      range="-3.14 3.14"
+                      damping="1" armature="0.01"/>
+
+                <!-- Gripper Roll -->
+                <body name="gripper_roll">
+                  <geom type="sphere" size="0.015" mass="0.01"/>
+                  <joint name="gripper_roll_joint"
+                        axis="1 0 0"
+                        range="-1.57 1.57"
+                        damping="1" armature="0.01"/>
+                  <body name="right_hand" pos="0 0 0" quat="0.7071 0 0.7071 0">
+                      <!-- This camera points out from the eef. -->
+                      <camera mode="fixed" name="eye_in_hand" pos="0.08 0 0" quat="0 0.707108 0.707108 0" fovy="75"/>
+                      <!-- To add gripper -->
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+</mujoco>

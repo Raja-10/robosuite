@@ -23,8 +23,8 @@ class WipeArena(TableArena):
 
     def __init__(
         self,
-        table_full_size=(0.8, 0.8, 0.05),
-        table_friction=(0.01, 0.005, 0.0001),
+        table_full_size=(0.4, 0.4, 0.05),
+        table_friction=(1.0, 0.005, 0.0001),
         table_offset=(0, 0, 0.8),
         coverage_factor=0.9,
         num_markers=10,

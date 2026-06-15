@@ -18,11 +18,11 @@ class Nero7(ManipulatorModel):
         super().__init__(xml_path_completion("robots/nero/robot.xml"), idn=idn)
 
         # Set joint damping
-        self.set_joint_attribute(attrib="damping", values=np.array((2.0, 2.0, 1.0, 1.5 , 1.0 , 0.8 , 0.8)))
+        self.set_joint_attribute(attrib="damping", values=np.array((0.4, 0.4, 0.2, 0.2 , 0.1 , 0.1 , 0.1))/10)
 
     @property
     def default_base(self):
-        return "RethinkMount"
+        return "NullMount"
 
     @property
     def default_gripper(self):
@@ -30,11 +30,11 @@ class Nero7(ManipulatorModel):
 
     @property
     def default_controller_config(self):
-        return {"right": "default_panda"}
+        return {"right": "default_nero7"}
 
     @property
     def init_qpos(self):
-        return np.array([0 , -np.pi/6  , 0, -np.pi/2.4, 0 , 0 , 0])
+        return np.array([0 , 0.0  , 0, 0, 0 , 0 , 0])
 
     @property
     def base_xpos_offset(self):

@@ -1,5 +1,7 @@
 from .device import Device
 from .keyboard import Keyboard
+from .joystick import Joystick
+from .nero_hardware_teleop import NeroHardwareTeleop
 
 try:
     from .spacemouse import SpaceMouse

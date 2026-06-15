@@ -1,0 +1,41 @@
+{
+    "type": "BASIC",
+
+    "body_parts": {
+
+        "arms": {
+
+            "right": {
+
+                "type": "JOINT_POSITION",
+
+                "input_max": 1,
+                "input_min": -1,
+
+                "output_max": 0.5,
+                "output_min": -0.5,
+
+                "input_type": "absolute",
+
+                "kp": 120,
+                "kv": 2,
+
+                "velocity_limits": [-3.0, 3.0],
+
+                "kp_limits": [0, 1000],
+
+                "interpolation": null,
+
+                "ramp_ratio": 1.0,
+
+                "gripper": {
+
+                    "type": "GRIP",
+
+                    "use_action_scaling": false
+                }
+            }
+        }
+    }
+}
+

@@ -1,6 +1,6 @@
 <mujoco model="wiping_hand">
     <worldbody>
-        <body name="wiping_gripper" pos="0 0 0.015" quat="0.707107 0 0 -0.707107" >
+        <body name="wiping_gripper" pos="0.055 0 -0.035" quat="0.707107 0 0.707107 0" >
             <site name="ft_frame" pos="0 0 0" size="0.01 0.01 0.01" rgba="1 0 0 1" type="sphere" group="1"/>
             <inertial pos="0 0 0" mass="3e-2" diaginertia="1e-2 1e-2 1e-2"/>
 

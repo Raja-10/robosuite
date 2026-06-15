@@ -21,13 +21,13 @@
 
   <worldbody>
 
-    <body name="base_link" pos="0 0 0" euler="0 0 0">
+    <body name="base_link" pos="0 0 0" euler="0 0 -3.14">
     <site name="right_center" pos="0 0 0" size="0.01" rgba="1 0.3 0.3 1" group="2"/>
       <inertial pos="-0.00319465997 -0.00005467608 0.04321758463"
                 mass="1.06458435"
                 fullinertia="0.00102659855152 0.00114399299508 0.00090872933022
                              0.00000186219753 -0.00000295298037 -0.00000078763492"/>
-      <geom type="mesh" mesh="base_link" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+      <geom type="mesh" mesh="base_link" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
       <!-- joint1: revolute about Z, offset +0.138 along Z from base_link -->
       <body name="link1" pos="0 0 0.138" euler="0 0 0">
@@ -37,7 +37,7 @@
                                0.00000273938306  0.00001463284987  0.00000183168344"/>
         <joint name="joint1" type="hinge" axis="0 0 1"
                range="-2.70526 2.70526" actuatorfrcrange="-24 24"/>
-        <geom type="mesh" mesh="link1" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+        <geom type="mesh" mesh="link1" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
         <!-- joint2: rpy="1.5707963 3.1415926 0" → offset=0, axis Z in rotated frame -->
         <body name="link2" pos="0 0 0" euler="-1.5707963 3.1415926 0">
@@ -46,8 +46,10 @@
                     fullinertia="0.00201093857656 0.00063544232555 0.00181943989593
                                  -0.00002399426785 -0.00000072824714  0.00005831284343"/>
           <joint name="joint2" type="hinge" axis="0 0 1"
-                 range="-1.74 1.74" actuatorfrcrange="-24 24"/>
-          <geom type="mesh" mesh="link2" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+                  range="-1.78 1.78" actuatorfrcrange="-24 24"/>
+                 <!-- range="-1.74 1.74" actuatorfrcrange="-24 24" -->
+                 
+          <geom type="mesh" mesh="link2" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
           <!-- joint3: pos="0 -0.31 0", rpy="-1.5707963 0 3.1415926926" -->
           <body name="link3" pos="0 -0.31 0" euler="1.5707963 0 3.1415926926">
@@ -57,7 +59,7 @@
                                    -0.00000026976739  0.00000305078107 -0.00003550220027"/>
             <joint name="joint3" type="hinge" axis="0 0 1"
                    range="-2.75 2.75" actuatorfrcrange="-18 18"/>
-            <geom type="mesh" mesh="link3" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+            <geom type="mesh" mesh="link3" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
             <!-- joint4: pos="0 0 0", rpy="-1.5707963 0 3.1415926926" -->
             <body name="link4" pos="0 0 0" euler="1.5707963 0 3.1415926926">
@@ -66,8 +68,9 @@
                         fullinertia="0.00050386693505 0.00023502068202 0.00040149523118
                                      -0.00000529675237  0.00000006134740  0.00001815932566"/>
               <joint name="joint4" type="hinge" axis="0 0 1"
-                     range="-1.01 2.14" actuatorfrcrange="-18 18"/>
-              <geom type="mesh" mesh="link4" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+                      range="-1.05 2.22" actuatorfrcrange="-18 18"/>
+                     <!-- range="-1.01 2.14" actuatorfrcrange="-18 18"/> -->
+              <geom type="mesh" mesh="link4" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
               <!-- joint5: pos="0 -0.27001 0", rpy="1.5707963 -1.5707963 0" -->
               <body name="link5" pos="0 -0.27001 0" euler="1.5707963 0 1.5707963">
@@ -77,7 +80,7 @@
                                         0.00000648218232 -0.00001463346849 -0.00004035185637"/>
                 <joint name="joint5" type="hinge" axis="0 0 1"
                        range="-2.75 2.75" actuatorfrcrange="-8 8"/>
-                <geom type="mesh" mesh="link5" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+                <geom type="mesh" mesh="link5" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
                 <!-- joint6: pos="0 0 0", rpy="1.5707963 -1.5707963 0" -->
                 <body name="link6" pos="0 0 0" euler="1.5707963 0 1.5707963">
@@ -86,8 +89,8 @@
                             fullinertia="0.00006027211661 0.00004699514792 0.00005756771792
                                          -0.00000024650903  0.00000015701294  0.00000004170875"/>
                   <joint name="joint6" type="hinge" axis="0 0 1"
-                         range="-0.73 0.95" actuatorfrcrange="-8 8"/>
-                  <geom type="mesh" mesh="link6" material="robot_grey" contype="1" conaffinity="1" group="1"/>
+                         range="-0.77 0.95" actuatorfrcrange="-8 8"/>
+                  <geom type="mesh" mesh="link6" material="robot_grey" contype="0" conaffinity="0" group="1"/>
 
                   <!-- joint7: pos="0 -0.0235 0", rpy="1.5707963 0 0" -->
                   <body name="link7" pos="0 -0.0235 0" euler="1.5707963 0 0">
@@ -101,7 +104,7 @@
                      <body name="right_hand" pos="0 0 0" quat="1 0 0 0"  >
                         <inertial pos="0 0 0" mass="0.5" diaginertia="0.05 0.05 0.05"/>
                         <!-- This camera points out from the eef. -->
-                        <camera mode="fixed" name="eye_in_hand" pos="0.05 0 0" quat="0 0.707108 0.707108 0" fovy="75"/>
+                        <camera mode="fixed" name="eye_in_hand" pos="0 0.1 0" quat="0 -0.707107 0 0.707107" fovy="75"/>
                         <!-- to add gripper -->
                       </body>
                   </body>
@@ -113,6 +116,7 @@
         </body>
       </body>
     </body>
+
 
   </worldbody>
 

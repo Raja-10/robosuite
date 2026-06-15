@@ -6,7 +6,7 @@ env = suite.make(
     env_name="Lift", # try with other tasks like "Stack" and "Door"
     robots="Nero7",  # try with other robots like "Sawyer" and "Jaco"
     has_renderer=True,
-    has_offscreen_renderer=False,
+    has_offscreen_renderer=True,
     use_camera_obs=False,
 )
 

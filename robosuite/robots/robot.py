@@ -505,7 +505,7 @@ class Robot(object):
         Returns:
             bool: True if this arm is near its joint limits
         """
-        tolerance = 0.1
+        tolerance = 0.02
         for qidx, (q, q_limits) in enumerate(
             zip(self.sim.data.qpos[self._ref_joint_pos_indexes], self.sim.model.jnt_range[self._ref_joint_indexes])
         ):

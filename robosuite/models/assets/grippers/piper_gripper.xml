@@ -38,10 +38,13 @@
         pos="0.032 0 -0.0235"  rpy="-1.5708 0 -1.5708"
         parent: link7  (treat as world here for standalone model)
     -->
+    <!-- The URDF flange transform is expressed in the original link7 frame.
+         Nero7's MJCF arm frames are already converted, so this is the
+         equivalent transform in the converted MJCF link7 frame. -->
     <body name="gripper_flange" pos="0.032 0 -0.0235" euler="1.5707963 1.5707963 0">
-      <inertial pos="0.0 0.0 -0.00032"
+      <inertial pos="0.000253201 -0.000322696 -0.010082901"
                 mass="0.04771096"
-                fullinertia="2.697e-05 4.311e-05 2.479e-05
+                fullinertia="3.614107e-05 1.7824164e-05 2.695944e-05
                              0 0 0"/>
 
       <!-- visual -->
@@ -52,13 +55,13 @@
       <!-- collision -->
       <geom name="gripper_flange_collision"
             type="mesh" mesh="gripper_flange"
-            contype="1" conaffinity="1" group="0"/>
+            contype="0" conaffinity="0" group="1"/>
 
       <!-- ft site at flange origin -->
       <site name="ft_frame" pos="0 0 0" size="0.01" rgba="1 0 0 1" type="sphere" group="1"/>
 
       <!--
-        gripper_base_joint: fixed, pos="0 0 0.0055" rpy="0 0 0"
+        gripper_base_joint: fixed, converted MJCF pos="0 0 0.0055"
       -->
       <body name="gripper_base" pos="0 0 0.0055" euler="0 0 0">
         <inertial pos="-0.000183807162235591 8.05033155577911e-05 0.0321436689908876"
@@ -77,7 +80,7 @@
               contype="1" conaffinity="1" group="0"/>
 
         <!--
-          gripper_joint1: prismatic along Z, pos="0 0 0.1358" rpy="1.5707963 0 3.1415926"
+          gripper_joint1: converted MJCF mounting transform
           axis xyz="0 0 1"  range: 0 → 0.05
         -->
         <body name="gripper_link1" pos="0 0.005 0.1358" euler="-1.5707963 0 3.1415926">
@@ -97,9 +100,13 @@
                 contype="0" conaffinity="0" group="1"
                 material="robot_grey"/>
           <!-- collision -->
+          <!-- The imported link mesh is visual-only for contact purposes.
+               Grasp contact is handled by the convex finger pad below; using
+               the non-convex mesh here can hook thin inserted pieces during
+               vertical withdrawal. -->
           <geom name="gripper_link1_collision"
                 type="mesh" mesh="gripper_link1"
-                contype="0" conaffinity="1" group="0"
+                contype="0" conaffinity="0" group="0"
                 solref="0.02 1" friction="1 0.005 0.0001" condim="4"/>
 
           <!-- finger 1 tip pad -->
@@ -113,7 +120,7 @@
         </body>
 
         <!--
-          gripper_joint2: prismatic along -Z, pos="0 0 0.1358" rpy="1.5707963 0 0"
+          gripper_joint2: converted MJCF mounting transform
           axis xyz="0 0 -1"  → in MuJoCo model as slide axis="0 0 1" with negated range
           range: -0.05 → 0
         -->
@@ -134,9 +141,10 @@
                 contype="0" conaffinity="0" group="1"
                 material="robot_grey"/>
           <!-- collision -->
+          <!-- See gripper_link1_collision: the pad is the contact model. -->
           <geom name="gripper_link2_collision"
                 type="mesh" mesh="gripper_link2"
-                contype="0" conaffinity="1" group="0"
+                contype="0" conaffinity="0" group="0"
                 solref="0.02 1" friction="1 0.005 0.0001" condim="4"/>
 
           <!-- finger 2 tip pad -->

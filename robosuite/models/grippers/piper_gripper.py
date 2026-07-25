@@ -23,7 +23,9 @@ class PiperGripperBase(GripperModel):
 
     @property
     def init_qpos(self):
-        return np.array([0.05, 0.05])
+        # Fully open. The second finger has a negative joint range
+        # ([-0.05, 0.0]), so its open position must also be negative.
+        return np.array([0.05, -0.05])
 
     @property
     def _important_geoms(self):

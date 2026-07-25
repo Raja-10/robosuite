@@ -22,7 +22,7 @@ class Nero7(ManipulatorModel):
 
     @property
     def default_base(self):
-        return "NullMount"
+        return "NeroTableMount"
 
     @property
     def default_gripper(self):
@@ -34,7 +34,19 @@ class Nero7(ManipulatorModel):
 
     @property
     def init_qpos(self):
-        return np.array([0 , 0.0  , 0, 0, 0 , 0 , 0])
+        # Collision-free, downward-facing manipulation pose selected with
+        # tune_nero7_init_pose.py and validated under dynamics for 200 steps.
+        return np.array(
+            [
+                0.3590570800436392,
+                0.1850950179686991,
+                -0.38515021674470995,
+                1.758171938003951,
+                0.04206276630372575,
+                -0.005008290725163654,
+                0.8511248905816553,
+            ]
+        )
 
     @property
     def base_xpos_offset(self):

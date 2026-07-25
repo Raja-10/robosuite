@@ -132,3 +132,7 @@ robosuite/models/assets/demonstrations_private
 *.zip
 *.pkl
 logs/
+
+#agent files
+.codex
+

@@ -1,39 +1,25 @@
 {
     "type": "BASIC",
-
     "body_parts": {
-
         "arms": {
-
             "right": {
-
                 "type": "JOINT_POSITION",
-
-                "input_max": [2.70526, 1.74, 2.75, 2.14, 2.75, 0.95, 1.5707963],
-                "input_min": [-2.70526, -1.74, -2.75, -1.01, -2.75, -0.73, -1.5707963],
-
-                "output_max": [2.70526, 1.74, 2.75, 2.14, 2.75, 0.95, 1.5707963],
-                "output_min": [-2.70526, -1.74, -2.75, -1.01, -2.75, -0.73, -1.5707963],
-
-                "input_type": "absolute",
-
+                "input_max": 1,
+                "input_min": -1,
+                "output_max": 0.05,
+                "output_min": -0.05,
+                "input_type": "delta",
                 "kp": 120,
                 "damping_ratio": 1,
-
                 "kp_limits": [0, 1000],
                 "qpos_limits": [
                     [-2.70526, -1.74, -2.75, -1.01, -2.75, -0.73, -1.5707963],
                     [2.70526, 1.74, 2.75, 2.14, 2.75, 0.95, 1.5707963]
                 ],
-
                 "interpolation": null,
-
                 "ramp_ratio": 1.0,
-
                 "gripper": {
-
                     "type": "GRIP",
-
                     "use_action_scaling": false
                 }
             }

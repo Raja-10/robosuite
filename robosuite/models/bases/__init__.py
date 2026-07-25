@@ -7,6 +7,7 @@ from .leg_base_model import LegBaseModel
 from .rethink_mount import RethinkMount
 from .rethink_minimal_mount import RethinkMinimalMount
 from .null_mount import NullMount
+from .nero_table_mount import NeroTableMount
 
 from .omron_mobile_base import OmronMobileBase
 from .null_mobile_base import NullMobileBase
@@ -19,6 +20,7 @@ BASE_MAPPING = {
     "RethinkMount": RethinkMount,
     "RethinkMinimalMount": RethinkMinimalMount,
     "NullMount": NullMount,
+    "NeroTableMount": NeroTableMount,
     "OmronMobileBase": OmronMobileBase,
     "NullMobileBase": NullMobileBase,
     "NoActuationBase": NoActuationBase,

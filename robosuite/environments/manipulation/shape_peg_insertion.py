@@ -9,7 +9,6 @@ from robosuite.environments.manipulation.manipulation_env import ManipulationEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import (
     CirclePiece,
-    RectanglePiece,
     ShapeSorterBoard,
     SquarePiece,
     TrianglePiece,
@@ -29,9 +28,10 @@ from robosuite.utils.placement_samplers import (
 from robosuite.utils.transform_utils import convert_quat
 
 
-SHAPES = ("circle", "square", "triangle", "rectangle")
-PIECE_CLASSES = (CirclePiece, SquarePiece, TrianglePiece, RectanglePiece)
-DEFAULT_SPAWN_X = (-0.20, -0.07, 0.07, 0.17)
+SHAPES = ("circle", "square", "triangle")
+BOARD_STATIONS = ("circle", "square", "triangle", "rectangle")
+PIECE_CLASSES = (CirclePiece, SquarePiece, TrianglePiece)
+DEFAULT_SPAWN_X = (-0.20, -0.07, 0.07)
 
 
 class ShapePegInsertion(ManipulationEnv):
@@ -152,7 +152,9 @@ class ShapePegInsertion(ManipulationEnv):
             )
         )
 
-        self.board = ShapeSorterBoard(stations=SHAPES)
+        # Keep the legacy rectangle peg station on the board even though the
+        # three-object task no longer spawns a movable rectangle piece.
+        self.board = ShapeSorterBoard(stations=BOARD_STATIONS)
         board_body = self.board.get_obj()
         board_body.set(
             "pos",

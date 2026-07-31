@@ -102,7 +102,7 @@ def viewer_is_running(env):
 def print_policy_status(observations, info, reward):
     distances = {
         shape: np.linalg.norm(observations[f"{shape}_eef_to_piece_pos"])
-        for shape in ("circle", "square", "triangle", "rectangle")
+        for shape in ("circle", "square", "triangle")
     }
     nearest = min(distances, key=distances.get)
     seated = [shape for shape, value in info["pieces_seated"].items() if value]
@@ -141,7 +141,7 @@ def run_episode(env, device, max_frequency, status_frequency):
         if step % status_frequency == 0:
             print_policy_status(observations, info, reward)
         if info["success"] and not success_announced:
-            print("\nTask complete: all four pieces are stably seated.")
+            print("\nTask complete: all three pieces are stably seated.")
             success_announced = True
         step += 1
 

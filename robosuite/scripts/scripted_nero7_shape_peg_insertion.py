@@ -29,7 +29,7 @@ from robosuite.models.objects.shape_sorter import PEG_HEIGHT, PIECE_HALF_THICKNE
 from robosuite.wrappers import DataCollectionWrapper
 
 
-SHAPES = ("circle", "square", "triangle", "rectangle")
+SHAPES = ("circle", "square", "triangle")
 POSITION_ACTION_SCALE = 0.025
 ORIENTATION_ACTION_SCALE = 0.25
 OPEN_GRIPPER = -1.0

@@ -28,6 +28,14 @@ def test_shape_peg_insertion_is_registered_and_resets():
     try:
         observations = env.reset()
         assert set(env.pieces) == set(SHAPES)
+        assert "rectangle" not in env.pieces
+        for peg_index in range(4):
+            assert (
+                env.sim.model.geom_name2id(
+                    f"shape_sorter_board_rectangle_peg_{peg_index}"
+                )
+                >= 0
+            )
         assert env.sim.model.camera_name2id("taskview") >= 0
         assert env.sim.model.light_name2id("shape_sorter_fill") >= 0
         assert not env._check_success()
@@ -53,7 +61,7 @@ def test_shape_peg_insertion_is_registered_and_resets():
             assert f"{shape}_stability_progress" in observations
             assert f"{shape}_seated" in observations
             assert not env._piece_is_stably_seated(shape)
-        assert observations["object-state"].shape == (148,)
+        assert observations["object-state"].shape == (108,)
     finally:
         env.close()
 
@@ -116,8 +124,7 @@ def test_shape_peg_insertion_reset_placements_are_separated():
             axis=-1,
         )
         assert np.min(pairwise[np.nonzero(pairwise)]) > 0.08
-        assert np.all(positions[:3, 1] < -0.12)
-        assert -0.12 < positions[3, 1] < -0.09
+        assert np.all(positions[:, 1] < -0.12)
         assert np.all(positions[:, 2] > env.table_offset[2])
     finally:
         env.close()
@@ -150,28 +157,6 @@ def test_shape_peg_insertion_exact_seated_state_and_reward():
             env._piece_metrics(shape)["center_to_seated_z_error"] <= 0.002
             for shape in SHAPES
         )
-    finally:
-        env.close()
-
-
-def test_symmetric_pi_rotated_rectangle_matches_unordered_pegs():
-    env = make_env(use_object_obs=False)
-    try:
-        env.reset()
-        shape = "rectangle"
-        target = env.sim.data.site_xpos[env.target_site_ids[shape]].copy()
-        env.sim.data.set_joint_qpos(
-            env.pieces[shape].joints[0],
-            np.concatenate([target, [0.0, 0.0, 0.0, 1.0]]),
-        )
-        address = env.piece_joint_qvel_addresses[shape]
-        env.sim.data.qvel[slice(*address)] = 0.0
-        env.sim.forward()
-
-        metrics = env._piece_metrics(shape)
-        assert metrics["maximum_hole_to_peg_xy_error"] < 1e-8
-        assert metrics["yaw_error_rad"] < 1e-8
-        assert env._piece_pose_is_seated(metrics)
     finally:
         env.close()
 

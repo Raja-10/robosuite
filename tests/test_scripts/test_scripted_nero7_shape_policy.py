@@ -47,7 +47,7 @@ def test_scripted_policy_short_hold_preserves_finite_simulation():
         ].reshape(3, 3)
         policy.hold(position, orientation, CLOSE_GRIPPER, steps=2)
         assert np.all(np.isfinite(env.sim.data.qpos))
-        assert policy.last_observation["object-state"].shape == (148,)
+        assert policy.last_observation["object-state"].shape == (108,)
     finally:
         env.close()
 

@@ -22,7 +22,7 @@ def test_nero7_shape_teleop_action_contract():
 
         observations, _, _, _ = env.step(action)
         assert np.all(np.isfinite(env.sim.data.qpos))
-        assert observations["object-state"].shape == (148,)
+        assert observations["object-state"].shape == (108,)
     finally:
         env.close()
 

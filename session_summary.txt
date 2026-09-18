@@ -1,0 +1,51 @@
+Session summary — Nero7 integration on branch nero_sim
+
+1. Ported Nero7 arm + PiperGripper into nero_sim (previously only existed on the
+   HumanEgo branch): nero_robot.py, robot.xml + meshes, piper_gripper.py + xml +
+   meshes, default_nero7.json controller config, and registrations in the
+   manipulators/grippers/robots __init__.py files.
+
+2. Fixed two real bugs found while testing:
+   - robot.xml materials had alpha 0.01 (invisible) -> set to 1.0.
+   - base_xpos_offset used NullMount with z=0 (copy-pasted from Panda, which
+     relies on a physical mount to reach table height) -> set z=0.8 so the base
+     sits on the table surface instead of the floor.
+
+3. Added robosuite/models/assets/robots/nero/README.md documenting the files and
+   how to run/test the robot.
+
+4. Built a dedicated environment, LiftLabSetup1
+   (robosuite/environments/manipulation/lift_labsetup1.py), reproducing a real
+   lab table: 0.76m x 1.34m table, Nero7 mounted 8cm from the near edge and
+   61cm/73cm from the left edge (per user's on-disk edit), with the table shifted
+   so Nero7's base sits exactly at world origin (0, 0, 0.8). Registered it in
+   robosuite/__init__.py.
+
+5. Verified the existing OSC_POSE controller (default_nero7.json) rather than
+   rewriting it: confirmed it converges to sub-mm/degree accuracy on realistic
+   reach targets (comparable to Panda), and confirmed its "world" input_ref_frame
+   (instead of "base", like other robots) is intentional and correct because
+   Nero7's base is mounted with a 180 degree yaw. Also found the arm saturates
+   torque (esp. joint 7, its weakest/narrowest joint) on aggressive near-full-reach
+   targets -- a real hardware limitation, not a controller bug. No changes were
+   needed to the controller config.
+
+6. Added a dark grey, fixed 4cm x 4cm x 4cm cube option to Lift (new optional
+   cube_size/cube_rgba constructor args, default None so every other robot/task is
+   unaffected) and set it as LiftLabSetup1's default cube.
+
+7. Added robosuite/scripts/pick.py: a scripted approach/align/grasp/lift routine
+   for Nero7 in LiftLabSetup1, following the existing scripts/ style (argparse,
+   --headless flag). First version only controlled position, holding whatever
+   orientation init_qpos gave -- verified it never actively aligned orientation
+   (measured ~2.9deg of passive drift only) and only worked because a cube's
+   4-fold symmetry tolerates up to 45deg of yaw error. Added a real alignment
+   step: reads the cube's actual yaw each episode, wraps it into the cube's
+   90-degree symmetry class to get the minimal correction (always <= 45deg), and
+   rotates the gripper to match before descending. Verified across multiple runs,
+   including a near-worst-case 40-43deg correction.
+
+8. Made Lift's cube placement rotation explicit: changed rotation=None to
+   rotation=[0, 2*pi] in the default UniformRandomSampler -- functionally
+   identical (None already meant "full random yaw"), but reads unambiguously
+   instead of looking like "no rotation".

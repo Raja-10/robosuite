@@ -152,6 +152,8 @@ class Lift(ManipulationEnv):
         initialization_noise="default",
         table_full_size=(0.8, 0.8, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
+        cube_size=None,
+        cube_rgba=None,
         use_camera_obs=True,
         use_object_obs=True,
         reward_scale=1.0,
@@ -181,6 +183,10 @@ class Lift(ManipulationEnv):
         self.table_full_size = table_full_size
         self.table_friction = table_friction
         self.table_offset = np.array((0, 0, 0.8))
+
+        # cube appearance (None preserves the original randomized red cube)
+        self.cube_size = cube_size
+        self.cube_rgba = cube_rgba
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -308,14 +314,23 @@ class Lift(ManipulationEnv):
             tex_attrib=tex_attrib,
             mat_attrib=mat_attrib,
         )
-        self.cube = BoxObject(
-            name="cube",
-            size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
-            size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
-            rgba=[1, 0, 0, 1],
-            material=redwood,
-            rng=self.rng,
-        )
+        if self.cube_size is not None:
+            self.cube = BoxObject(
+                name="cube",
+                size=self.cube_size,
+                rgba=self.cube_rgba if self.cube_rgba is not None else [1, 0, 0, 1],
+                material=None if self.cube_rgba is not None else redwood,
+                rng=self.rng,
+            )
+        else:
+            self.cube = BoxObject(
+                name="cube",
+                size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
+                size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
+                rgba=self.cube_rgba if self.cube_rgba is not None else [1, 0, 0, 1],
+                material=None if self.cube_rgba is not None else redwood,
+                rng=self.rng,
+            )
 
         # Create placement initializer
         if self.placement_initializer is not None:
@@ -327,7 +342,7 @@ class Lift(ManipulationEnv):
                 mujoco_objects=self.cube,
                 x_range=[-0.03, 0.03],
                 y_range=[-0.03, 0.03],
-                rotation=None,
+                rotation=[0, 2 * np.pi],  # full random yaw (rotation=None also means this, but is easy to misread as "no rotation")
                 ensure_object_boundary_in_range=False,
                 ensure_valid_placement=True,
                 reference_pos=self.table_offset,

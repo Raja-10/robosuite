@@ -1,6 +1,7 @@
 import numpy as np
 
 from robosuite.environments.manipulation.lift import Lift
+from robosuite.models.arenas import LabWoodTableArena
 
 # Table dimensions (L=x/vertical-depth, W=y/horizontal-width, H=thickness), in meters.
 TABLE_FULL_SIZE = (0.76, 1.34, 0.05)
@@ -24,6 +25,16 @@ NERO7_BASE_POS = np.array([0.0, 0.0, TABLE_HEIGHT])
 CUBE_SIZE = (0.02, 0.02, 0.02)
 CUBE_RGBA = (0.2, 0.2, 0.2, 1)
 
+# Cube spawn region, offset from table_offset. Found via a gridded reachability scan
+# (closed-loop OSC reach test, holding the gripper vertical, at grasp height) over the
+# whole table: with the base at the world origin, most of the table -- including the
+# region right around the base and the far/side edges -- gives large position error
+# and/or requires the wrist to tilt well off vertical to get there. Only a modest zone
+# roughly in front-right of the base tracks both position (<10mm) and verticality
+# (<15deg tilt) well; this range sits inside it with margin.
+CUBE_X_RANGE = [-0.02, 0.12]
+CUBE_Y_RANGE = [0.09, 0.19]
+
 
 class LiftLabSetup1(Lift):
     """
@@ -32,15 +43,27 @@ class LiftLabSetup1(Lift):
     and 61cm from the left edge.
     """
 
+    arena_type = LabWoodTableArena
+
     def __init__(
         self,
         robots="Nero7",
         table_full_size=TABLE_FULL_SIZE,
         cube_size=CUBE_SIZE,
         cube_rgba=CUBE_RGBA,
+        cube_x_range=CUBE_X_RANGE,
+        cube_y_range=CUBE_Y_RANGE,
         **kwargs,
     ):
-        super().__init__(robots=robots, table_full_size=table_full_size, cube_size=cube_size, cube_rgba=cube_rgba, **kwargs)
+        super().__init__(
+            robots=robots,
+            table_full_size=table_full_size,
+            cube_size=cube_size,
+            cube_rgba=cube_rgba,
+            cube_x_range=cube_x_range,
+            cube_y_range=cube_y_range,
+            **kwargs,
+        )
 
     def _load_model(self):
         self.table_offset = TABLE_OFFSET

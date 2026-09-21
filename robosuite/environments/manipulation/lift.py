@@ -142,6 +142,10 @@ class Lift(ManipulationEnv):
         AssertionError: [Invalid number of robots specified]
     """
 
+    # TableArena subclass to instantiate in _load_model; override in a subclass to
+    # swap in a different table appearance (see LiftLabSetup1 / LabWoodTableArena).
+    arena_type = TableArena
+
     def __init__(
         self,
         robots,
@@ -154,6 +158,8 @@ class Lift(ManipulationEnv):
         table_friction=(1.0, 5e-3, 1e-4),
         cube_size=None,
         cube_rgba=None,
+        cube_x_range=None,
+        cube_y_range=None,
         use_camera_obs=True,
         use_object_obs=True,
         reward_scale=1.0,
@@ -187,6 +193,9 @@ class Lift(ManipulationEnv):
         # cube appearance (None preserves the original randomized red cube)
         self.cube_size = cube_size
         self.cube_rgba = cube_rgba
+        # cube spawn region, offset from table_offset (None preserves the original range)
+        self.cube_x_range = cube_x_range
+        self.cube_y_range = cube_y_range
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -289,7 +298,7 @@ class Lift(ManipulationEnv):
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
-        mujoco_arena = TableArena(
+        mujoco_arena = self.arena_type(
             table_full_size=self.table_full_size,
             table_friction=self.table_friction,
             table_offset=self.table_offset,
@@ -340,8 +349,8 @@ class Lift(ManipulationEnv):
             self.placement_initializer = UniformRandomSampler(
                 name="ObjectSampler",
                 mujoco_objects=self.cube,
-                x_range=[-0.03, 0.03],
-                y_range=[-0.03, 0.03],
+                x_range=self.cube_x_range if self.cube_x_range is not None else [-0.03, 0.03],
+                y_range=self.cube_y_range if self.cube_y_range is not None else [-0.03, 0.03],
                 rotation=[0, 2 * np.pi],  # full random yaw (rotation=None also means this, but is easy to misread as "no rotation")
                 ensure_object_boundary_in_range=False,
                 ensure_valid_placement=True,

@@ -1,5 +1,14 @@
 Session summary — Nero7 integration on branch nero_sim
 
+Environment this was done/tested in:
+  conda env: base
+  python: 3.13.5, mujoco: 3.3.7, numpy: 2.4.4
+  repo: /home/cobot/Desktop/Raja/Projects/robosuite, branch: nero_sim
+  main env under test: LiftLabSetup1 (robosuite/environments/manipulation/lift_labsetup1.py)
+  Note: this machine also has a ROS Humble install whose pytest plugin
+  (launch_testing) crashes plain `pytest` collection -- run pytest with
+  PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 to avoid it.
+
 1. Ported Nero7 arm + PiperGripper into nero_sim (previously only existed on the
    HumanEgo branch): nero_robot.py, robot.xml + meshes, piper_gripper.py + xml +
    meshes, default_nero7.json controller config, and registrations in the
@@ -49,3 +58,389 @@ Session summary — Nero7 integration on branch nero_sim
    rotation=[0, 2*pi] in the default UniformRandomSampler -- functionally
    identical (None already meant "full random yaw"), but reads unambiguously
    instead of looking like "no rotation".
+
+9. Applied the user's real table photo (robosuite/models/assets/textures/
+   table_texture.png) as LiftLabSetup1's tabletop material. The original photo had
+   an uneven lighting gradient (~10% brighter on one side) and a blown-out (255,
+   pure white) specular highlight in one corner; corrected both via a flat-field
+   pass (divide out a heavily-blurred illumination map per channel) and a
+   highlight soft-clip, and rotated it 90deg so the grain runs along the table's
+   long axis. Converted to PNG since MuJoCo doesn't support JPEG textures. Added
+   robosuite/models/arenas/lab_wood_table_arena.py (LabWoodTableArena, a TableArena
+   subclass) and a small generic hook (Lift.arena_type, defaulting to TableArena)
+   so LiftLabSetup1 can swap it in without touching Lift's behavior for any other
+   robot/task.
+
+10. Adjusted the table texture further per feedback: rotated 90deg (grain now runs
+    along the table's long/horizontal axis in the render) and made it brighter and
+    more orange/warm (+15% brightness, +8% red, -10% blue).
+
+11. Confirmed "Nero7" is a real product: AgileX Robotics' "NERO" 7-DOF arm, and its
+    gripper is AgileX's "Piper" gripper -- the current arm/gripper collision STLs in
+    this repo are already byte-for-byte identical to the official meshes in
+    github.com/agilexrobotics/agx_arm_urdf (nero/meshes/*.stl), except
+    gripper_flange.stl which differs (untouched, only used for collision).
+    However, those STLs are the plain, uncolored COLLISION meshes -- the official
+    repo separately ships detailed, per-part-colored VISUAL meshes as .dae
+    (Collada) files (nero/meshes/dae/), which is what real AgileX renders use.
+    Converted those (via trimesh) into per-material binary STL submeshes (mujoco
+    doesn't load .dae) under new vis_meshes/ folders (13MB for the arm, 2.7MB for
+    the gripper), and wired them into robot.xml / piper_gripper.xml as separate
+    visual geoms per sub-part with real materials/colors (matching Panda's own
+    meshes/ vs obj_meshes/<link>_vis/ convention) -- while leaving every existing
+    collision geom, joint, and body untouched, so physics/controller behavior is
+    unchanged. Along the way: fixed a mujoco "mesh volume too small" error on thin
+    decal-like submeshes (added inertia="shell" -- irrelevant for visual-only
+    geoms), and discovered gripper_base.dae/gripper_flange.dae are authored in
+    millimeters (unlike every other file, which is in meters) -- that ~1000x scale
+    mismatch was blowing up the scene's extent and rendering everything else black;
+    rescaled those two by 0.001 to fix. Verified pick.py and the controller test
+    suite still pass after the swap.
+    Also worth noting (not fixed, out of scope for a visual-only request): the arm
+    currently has zero collision geometry of its own (all geoms are contype=0/
+    conaffinity=0) -- it can't physically collide with the table, objects, or
+    itself. Only the gripper has real collision geoms.
+
+12. Found and fixed a real orientation bug: gripper_base's visual sub-meshes (from
+    AgileX's own .dae export) were rotated ~90 degrees relative to its collision
+    mesh -- confirmed via PCA-axis comparison (two axes off by ~90deg) and a brute-
+    force search over the 24 proper axis-permutation rotations, scored by nearest-
+    neighbor distance to the known-correct collision STL (best fit: 0.16mm mean
+    residual, i.e. exact). Applied that rotation to all 4 gripper_base_vis
+    sub-meshes. Checked every other part (all 8 arm links, gripper_flange,
+    gripper_link1/2) the same way -- all were already sub-mm aligned, so this was
+    an isolated issue specific to gripper_base's own source file, not a pipeline
+    bug. Re-verified pick.py and the controller tests after the fix.
+
+13. Added real collision geometry for the arm (per item 11's finding): one
+    <geom type="mesh" group="0" name="<link>_collision"/> per link, reusing the
+    original plain STL mesh assets (already declared, just unused by any geom
+    until now) -- matching Panda's exact convention (plain mesh, default
+    contype/conaffinity, group 0). Verified: 200 random-action steps stay stable
+    (no NaNs, ncon>0 confirming real contacts now register), pick.py succeeds
+    across 7 separate runs with varied random cube placements, and all 3 Nero7
+    controller tests still pass.
+
+14. Investigated "why doesn't the gripper approach exactly vertically" and did a
+    gridded workspace-reachability scan of the table. Root causes, in order found:
+      a. Real bug in pick.py: the descend/close/lift go_to() calls never actually
+         passed target_mat despite the comment claiming they held orientation --
+         so orientation was free to drift after the initial alignment step. Fixed.
+      b. Still-bad after (a): target_mat itself was built from whatever orientation
+         resulted from the first "move above cube" step, which had NO orientation
+         control (already ~28deg off vertical by the time it was captured as the
+         "aligned" reference). Fixed by computing target_mat from the orientation
+         captured immediately at reset() (~0-2deg off vertical, before any motion)
+         instead.
+      c. Even after (a)+(b), the "lift" phase alone (moving 0.2m straight up while
+         holding the grasped cube) still adds ~20-25deg of tilt on top of a good
+         ~6-11deg after approach/descend/grasp. Traced this to joint 6 (the wrist
+         joint, actuatorfrcrange +/-8N*m) being torque-saturated 100% of the time
+         during that motion -- it's already maxed out just supporting the
+         arm+cube's weight in that pose, so no amount of extra commanded torque
+         (i.e. no controller gain change) can add more correction there. This is a
+         genuine hardware ceiling (matches Nero7's real spec: the wrist motors are
+         far weaker than the shoulder/elbow), not a bug. Cube-lift success itself is
+         unaffected (height-only check), but the visible tilt during lift is real
+         and not further fixable without reducing the lift height/speed or the
+         load, or accepting a non-vertical carry.
+      Also retuned default_nero7.json's OSC gains as a partial mitigation: kp
+      [200,200,200,30,30,30] -> [200,200,200,80,80,80], damping_ratio 2.0 -> 1.5.
+      Tested several candidates (Panda's scalar 150/dr1 badly hurt position
+      accuracy -- up to 125mm error at a far point -- for better tilt; this one
+      trades a smaller, more acceptable amount of position accuracy for a real
+      tilt improvement). Verified against the existing controller test suite.
+      Separately, did a gridded closed-loop reach scan (holding vertical
+      orientation, at grasp height) across the whole 0.76x1.34m table: most of the
+      table -- especially right around the base and the far/side edges -- gives
+      either large position error or forces significant tilt to reach; only a
+      modest zone roughly in front-right of the base (world x in [0.26,0.44],
+      y in [0.05,0.15]) tracks both position (<10mm) and verticality (<15deg) well
+      simultaneously. Added optional cube_x_range/cube_y_range constructor args to
+      Lift (default None, so no other robot/task is affected) and set
+      LiftLabSetup1's defaults to a range inside that good zone (offset from
+      table_offset: x in [-0.02,0.12], y in [0.09,0.19]).
+      Net result verified via 8 fresh pick.py runs with the fixes + new spawn
+      region: 7/8 succeeded (the one failure was a near-worst-case ~38deg cube-yaw
+      correction); tilt during approach/descend/grasp now runs ~6-14deg (down from
+      the original ~24-30deg average), with the lift-phase joint-6-saturation tilt
+      noted above still present as a known, hardware-limited residual.
+
+15. Per explicit request, changed every joint's actuatorfrcrange and motor
+    ctrlrange in robot.xml from the original AgileX spec (24,24,18,18,8,8,8 N*m)
+    to a uniform +/-12 N*m across all 7 joints. Note this deviates from the real
+    hardware spec: joints 1-4 lose roughly half their torque headroom (24/18->12),
+    while joints 5-7 gain 50% (8->12). Re-measured the lift-phase saturation from
+    item 14c: joint 6 is no longer maxed out, and lift-phase tilt dropped from
+    ~35deg to ~23deg -- but joint 5 now saturates instead during that same phase,
+    so this is a partial improvement, not a full fix (some wrist joint still maxes
+    out under the cube+arm's own weight in that pose). Re-verified: 6/6 fresh
+    pick.py runs succeeded (including several near-worst-case ~40deg yaw
+    corrections), and all 3 Nero7 controller tests still pass.
+
+16. Added a fixed camera ("d435") to LabWoodTableArena, modeled after an Intel
+    RealSense D435: positioned 30cm in from the table's near/robot-base edge and
+    15cm in from its right edge, 55cm above the table surface, computed to look at
+    the table center. fovy=42.5deg is the D435's actual published RGB sensor
+    vertical FOV (horizontal 69.4deg, diagonal 77deg -- confirmed via web search
+    against Intel's own spec pages, not just recalled; the wider 87x58x95deg figure
+    is the separate depth module, which mujoco's single-fovy <camera> can't
+    represent alongside the RGB one). Verified by rendering from it directly.
+
+17. Added robosuite/scripts/view_camera.py (same style as pick.py: argparse,
+    live-viewer or --save-a-frame modes, defaults to the "d435" camera but takes
+    --camera for any other) and NERO7_LAB_SETUP.md at the repo root, documenting
+    the setup and the commands to run pick.py / view_camera.py / the controller
+    tests.
+
+18. Fixed view_camera.py's live-viewer mode: env.viewer.set_camera() takes
+    camera_id (int), not camera_name -- was raising a TypeError. Resolves the name
+    via sim.model.camera_name2id() first. (Live mode also can't be verified in this
+    sandbox -- no display/GPU driver for on-screen rendering here -- but the
+    headless --save path works and was used for all camera verification.)
+
+19. Corrected the d435 camera's edge reference per feedback: it's 15cm from the
+    LEFT edge (not the right edge as originally placed), still 30cm from the
+    near/robot-base edge and 55cm above the table, still pointed at the table
+    center. New position: world (0.22, -0.58, 1.35). Re-verified by rendering
+    (readable "AGILE-X" branding on the base is visible from this angle) and
+    re-running pick.py.
+
+20. Rotated the pick's grasp yaw by 90deg so the gripper doesn't occlude the cube
+    from the d435 camera: confirmed the problem first (rendered the pre-fix
+    descend pose from d435 -- the cube was fully hidden behind the gripper body),
+    added GRIPPER_YAW_OFFSET to pick.py's alignment step (a cube's 4-fold symmetry
+    means the perpendicular face pair, 90deg from the "nearest" one, is an equally
+    valid flat-face grasp). Adding +90deg broke reliability badly (0/5 picks
+    succeeded) -- diagnosed as Nero7's wrist having an asymmetric usable range:
+    swinging the wrist to a fixed -90deg target converges to ~10deg residual error,
+    but the same magnitude in +90deg only converges to ~50deg. Subtracting the
+    offset instead (swinging negative) fixed it: 5/6 picks succeeded after also
+    bumping the alignment phase's step budget (80->150, since a ~90-135deg swing
+    needs more time than the original <=45deg one). Re-verified the occlusion fix
+    still holds with the corrected sign (cube clearly visible next to the gripper
+    in the d435 render).
+
+21. Per request, merged robosuite/scripts/view_camera.py into pick.py and deleted
+    the standalone file. pick.py now takes --camera (view from a given camera,
+    still runs the pick), --view (skip the pick, just look around), and --save
+    (with --view: headless, save one frame instead of a live viewer) --
+    --view defaults to the "d435" camera. Verified both the merged --view --save
+    path and a normal --headless pick still work. Updated NERO7_LAB_SETUP.md's
+    commands section to match (single script, corrected left-edge camera
+    description, and the yaw-rotation note on the pick description).
+
+22. Built a scripted data-collection pipeline for LiftLabSetup1, in Plan Mode.
+    Checked mrl/HumanEgo (read-only git show, no checkout) for prior art first --
+    found scripted_stack_policy.py/collect_scripted_stack_demos.py already solve
+    the exact class of problem pick.py's hardcoded -90deg offset and fixed step
+    counts have: a tolerance/hold waypoint loop instead of fixed steps, and
+    folding the grasp yaw relative to the arm's *current* eef yaw instead of a
+    fixed reference (that code's own comment names Nero7's limited wrist range as
+    the reason -- exactly what we'd independently found). Per explicit request,
+    kept the new pipeline as simple as possible rather than porting Stack's full
+    apparatus (dropped: multi-cube place-elsewhere logic, split leveling+yaw
+    rotation scheme, 7+ CLI-tunable knobs, robomimic metadata step) -- reused
+    pick.py's own proven single target_mat rotation-error style instead of
+    porting a second rotation-control scheme.
+    - robosuite/scripts/scripted_lift_policy.py (new): nearest_face_yaw(yaw,
+      reference) folds relative to (current eef yaw - 90deg) -- self-adapting
+      version of pick.py's hardcoded GRIPPER_YAW_OFFSET. move_to()/hold() replace
+      pick.py's fixed-step go_to() with tolerance+hold-based waypoints (give up
+      after a step cap, never blocks forever). run_episode(env, render, verbose)
+      is the reusable entry point. First version's hold() (used while closing the
+      gripper) didn't re-correct position, only orientation -- unlike pick.py's
+      equivalent phase, which keeps re-commanding the grasp position throughout.
+      This caused a real regression (6/10 success in initial testing, worse than
+      pick.py's own rate); fixing hold() to also hold position (matching pick.py)
+      brought it to 20/20 across two follow-up batches.
+    - robosuite/scripts/collect_lift_data.py (new): wraps one LiftLabSetup1 env in
+      DataCollectionWrapper once, loops env.reset()+run_episode() for
+      --num-episodes (default 20), calls gather_demonstrations_as_hdf5 once after
+      the loop (not per-episode, since collect_human_demonstrations.py's own
+      per-episode rebuild is a UX nicety for interruptible human teleop that a
+      fixed-count scripted batch doesn't need). Only 3 CLI flags: --num-episodes,
+      --directory (default "nero_datasets/lift", per request), --render.
+    - pick.py deliberately untouched (git diff on it shows nothing from this
+      work) -- confirmed the "as simple as possible" ask by not overloading the
+      existing interactive demo script with batch-collection concerns.
+    Verified end-to-end: hdf5 schema inspected directly (env_info round-trips,
+    states/actions shapes match); replayed one episode's actions open-loop by
+    hand (bypassing playback_demonstrations_from_hdf5.py's has_renderer=True
+    requirement, which this sandbox can't satisfy) -- 0/470 steps diverged from
+    the recorded states, and the independently-replayed episode's final cube
+    height also confirms success, i.e. real playback compatibility, not just a
+    matching schema on paper. A full default run (20 episodes, headless) saved
+    17 successful demos (16 by the script's own count -- the +1 is the documented
+    running-count-vs-hdf5 subtlety, observed for real here). Camera-view question
+    ("does the spawn range stay in d435's view") was answered analytically before
+    any implementation (all 4 spawn-region corners project well inside the d435
+    frustum) rather than needing new tooling -- pick.py's existing --view --save
+    already covers ad hoc visual re-checks if ever wanted.
+
+23. Added a "Collect a demonstration dataset" section to NERO7_LAB_SETUP.md
+    documenting collect_lift_data.py / scripted_lift_policy.py usage (default run,
+    --num-episodes, --directory, --render) and how to play a collected dataset
+    back with playback_demonstrations_from_hdf5.py.
+
+24. Investigated "why isn't the gripper perfectly vertical" in scripted_lift_policy.py
+    specifically (measured 12-26deg tilt after the lift phase). Ruled out both
+    torque saturation and joint position limits directly (checked actuator_force
+    against ctrlrange and qpos against jnt_range at the plateau -- neither was
+    binding), so it's a steady-state OSC/nullspace control equilibrium, not a hard
+    physical block. Confirmed it's tunable (not a wall) by testing higher
+    orientation gains and seeing the residual shrink accordingly. Fix: added
+    LIFT_ORI_KP=250, temporarily boosting only the lift phase's orientation
+    kp/kd (from the default 80) on the live controller instance
+    (env.robots[0].composite_controller.part_controllers["right"]), restored
+    immediately after so it doesn't leak into other phases or other episodes
+    reusing the same controller. Reduced worst-case tilt from ~26deg to ~19deg
+    across a 6-trial sample; still not literally 0deg (a real, if smaller,
+    residual remains -- likely inherent to this arm/controller combination, not
+    further fixable without deeper changes to robosuite's OSC nullspace handling
+    itself). Verified 10/10 success afterward, then collected a 4-episode dataset
+    (as requested) to nero_datasets/lift/demo.hdf5 -- all 4 saved successfully.
+
+25. Added an explicit "home" OSC pose to scripted_lift_policy.py's run_episode:
+    captures the arm's pose right after reset (position + the existing vertical_mat
+    orientation) as home_pos, explicitly move_to's there as the episode's first
+    waypoint (rather than assuming reset already put it there), then -- after the
+    lift and its success check -- move_to's back to that same home_pos/orientation
+    (still holding the cube) as the episode's last action, using double the normal
+    step budget since it's a large reach-back done under load. Verified: success
+    rate unaffected (7/8, 9/10, 4/6 across batches -- consistent with pre-change
+    variance). The return trip doesn't fully converge to tight tolerance (ends up
+    ~4-17cm from home rather than <5mm) -- it's a hard, loaded reach-back subject
+    to the same steady-state control residual documented in item 24, so this is
+    reported as a real, honest limitation rather than claimed as fully solved.
+    Also answered: the cube is 0.064kg (64g), from its 4cm cube size at the
+    BoxObject default density (1000 kg/m^3) -- Lift/LiftLabSetup1 don't override it.
+
+26. Attempted to push both scripts toward 100% success. Tried a "retry with the
+    180deg-flipped wrist solution" fallback in scripted_lift_policy.py when the
+    approach phase looked unconverged -- this was net-harmful (first cut: 1/20,
+    after loosening the trigger threshold: 11/20, both worse than the 14/20
+    baseline) because the retry started from an already-displaced pose, not a
+    clean one, so it usually couldn't converge either and left the arm worse off.
+    Reverted it. The safe fix that actually helped in both scripts: just give the
+    approach phase more time (150->300 steps in pick.py, 150->300 in
+    scripted_lift_policy.py) -- this can only help since the target doesn't
+    change. Also lowered pick.py's grasp height from +5mm above cube center to
+    the center itself, for a firmer grip. Net result: pick.py 95% (19/20, 19/20
+    across two batches), scripted_lift_policy.py 90% (18/20) -- real improvement
+    over the ~70-90% baseline, though not literally 100%.
+
+27. Tested (before applying) the hypothesis that GRIPPER_YAW_OFFSET should be
+    +90deg instead of -90deg because "the vertical alignment issue is caused by
+    joint limits": ran both directions head-to-head with the new 300-step budget,
+    10 trials each. Data contradicted the hypothesis -- -90deg gave 10/10 success
+    with ~24deg mean tilt, +90deg gave 1/10 success with ~51deg mean tilt (worse
+    on both success AND tilt). Reported this before making any change. Per
+    explicit follow-up request, reverted GRIPPER_YAW_OFFSET to +90deg in pick.py
+    anyway; re-verified the real-world effect of that choice: 4/20 (20%) success
+    over a fresh 20-trial batch. scripted_lift_policy.py's equivalent offset was
+    left untouched (still -90deg, still ~90% success) since the request was
+    specific to pick.py.
+
+28. Clarified: the "revert to +90" in item 27 was a miscommunication -- the actual
+    request was to revert AWAY FROM +90, back to -90 (the working, high-success
+    version), plus a new requirement: the gripper's jaws should close
+    horizontally (left-right in frame), not vertically, as seen from the d435
+    camera. Reverted pick.py's GRIPPER_YAW_OFFSET to -pi/2. Rendered the grasp
+    moment from d435 to check directly rather than assume: with -90deg, the two
+    fingers do spread left-right in the frame (horizontal closing), confirming
+    this setting already satisfies the new requirement -- no further change
+    needed. Re-verified success rate: 19/20 (95%), matching the earlier -90deg
+    baseline.
+
+29. Confirmed the joint-limit hypothesis directly and thoroughly: checked qpos vs
+    jnt_range across the approach/descend/lift phases of multiple trials in both
+    scripts (not just one plateau, as in item 24). Found joint 6 (range -44/+54deg)
+    genuinely at its angle limit during the approach phase in several trials --
+    a real hardware constraint the 90deg occlusion-avoidance offset was pushing it
+    into, not just a control-tuning artifact.
+    Per request, tested removing the occlusion offset entirely (plain
+    nearest-face alignment, <=45deg swing instead of up to 135deg) in both
+    scripts: joint 6 no longer hit its limit during approach in either, and
+    success rates were excellent (10/10 in a first batch each). Applied the
+    removal to both: pick.py's GRIPPER_YAW_OFFSET -> 0.0, scripted_lift_policy.py's
+    target_yaw reference -> eef_yaw (no +/-90deg shift). Re-verified with full
+    20-trial batches: pick.py reached 20/20 (100%). This is not a complete fix,
+    though -- the lift phase still shows tilt afterward (18-38deg in pick.py's
+    testing), now occasionally tied to joint 4 nearing its own limit instead of
+    joint 6, so it's a different manifestation of a related but separate
+    constraint from the lift motion itself. Tradeoff accepted per request: the
+    gripper's flat body now faces the d435 camera again during the grasp, so the
+    cube may be partially/fully occluded in that camera's view at that moment
+    (the whole reason the offset existed in the first place).
+    Full 20-trial batches after applying the change to both scripts: pick.py
+    20/20 (100%), scripted_lift_policy.py 20/20 (100%).
+
+30. Diagnosed "why isn't the motion smooth" by measuring the actual eef speed
+    profile through a pick.py run rather than guessing: found the largest jerk
+    (3.3 m/s^2 speed change) at the approach->descend phase boundary, because
+    go_to's fixed step counts hand off to the next phase's target as soon as the
+    budget runs out, whether or not the arm has actually stopped moving (measured
+    ~0.2 m/s still at that boundary) -- so the next phase's fresh target abruptly
+    redirects existing momentum. Also noted a secondary cause: default_nero7.json
+    has interpolation=null, so each phase target is a hard step input into a
+    fairly stiff PD controller (kp=200) rather than a smoothed ramp. Not yet
+    fixed -- reported the diagnosis; the requested follow-up (below) was the
+    home-pose bookend, not this.
+
+31. Added pick.py's own "home" OSC pose bookend, mirroring scripted_lift_policy.py
+    (item 25): captures the arm's actual pose right after reset (whatever angle it
+    happens to be in, not a hardcoded one) as home_pos/vertical_mat, explicitly
+    go_to's there as the first waypoint, and returns there (still holding the
+    cube) as the last action after the lift. Verified: 10/10 success in a batch
+    with the return-to-home distance measured directly (21-40mm from home --
+    much tighter than scripted_lift_policy.py's earlier 43-173mm, since without
+    the 90deg occlusion offset there's a much shorter reach-back distance), and
+    4/4 via the actual pick.py CLI.
+
+32. Ported the Stack task + policy from the user's local HumanEgo checkout
+    (/home/cobot/Desktop/Raja/Projects/HumanEgo), per explicit request ("scripted
+    stack policy in humanego branch is perfect lets just use that here").
+    - robosuite/environments/manipulation/stack.py: added the same generic,
+      additive hooks Lift.py already has -- arena_type (default TableArena),
+      cube_size/cube_rgba (applied to both cubeA/cubeB when given), cube_x_range/
+      cube_y_range, and a new goal_offset -> self.stack_target_pos (the ported
+      policy's `env.stack_target_pos` dependency, previously only existed in
+      HumanEgo's own modified stack.py, not upstream). Also applied the same
+      rotation=None -> rotation=[0, 2*pi] explicit-yaw fix Lift.py got earlier
+      (same "None already means full random yaw but reads like no rotation"
+      gotcha). All opt-in via kwargs defaulting to None -- zero behavior change
+      for existing Stack usage with other robots.
+    - robosuite/environments/manipulation/stack_labsetup1.py (new):
+      StackLabSetup1(Stack), mirroring LiftLabSetup1 exactly (same table size/
+      offset derivation, same Nero7 base-at-world-origin placement, same
+      LabWoodTableArena) but with two matching 4cm dark-grey cubes (CUBE_SIZE/
+      CUBE_RGBA, reusing Lift's exact values) instead of Stack's default
+      differently-sized red/green cubeA/cubeB. Pick region (CUBE_X_RANGE/
+      CUBE_Y_RANGE) reuses LiftLabSetup1's own verified-reachable zone, narrowed
+      in y to leave room for a separate GOAL_OFFSET point below it.
+    - robosuite/scripts/scripted_stack_policy.py and its dependency
+      scripted_wipe_policy.py (for TARGET_NORMAL/get_orientation_action) copied
+      over essentially unchanged -- only env_name ("Stack"->"StackLabSetup1")
+      and the default --robot ("Panda"->"Nero7") were edited.
+    - Found and fixed something unrelated mid-testing that would have broken
+      every script, not just this one: Nero7.init_qpos was still set to
+      np.zeros(7) from an earlier interactive debugging session (arm pointing
+      straight up, eef at ~1.68m, ~85cm above the table -- totally outside any
+      task's workspace), not the tuned pose. Restored it to
+      [0.3312, 0.4951, -0.4556, 1.7133, 0.0425, -0.3086, 0.9589]. Re-verified
+      pick.py still works after the fix (still succeeds).
+    - Verified end-to-end: 150 (the original file's default) max-phase-steps
+      wasn't enough for Nero7 here either (consistent with every other script
+      this session) -- 300 fixed it enough to run. Result: 5/8 (62.5%) success
+      in a batch. Follow-up diagnostic (4 more trials, checking the per-cube
+      "grasped" print) showed cubeB grasps reliably (4/4) and cubeA mostly
+      (3/4), but stacking still failed in 2 of the 3 both-grasped trials --
+      so the dominant failure mode here is placement precision (cubeA landing
+      in contact with cubeB), not grasping, likely because the pick region was
+      narrowed to fit inside LiftLabSetup1's already-tight verified-reachable
+      zone, leaving little margin between the pick region and the separate
+      goal point. Not yet further tuned -- flagged to the user as the next
+      thing to improve if higher reliability is wanted (e.g. loosening
+      place-phase tolerance/hold-steps, or widening the workspace if reach
+      allows it).

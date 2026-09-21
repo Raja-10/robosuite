@@ -4,6 +4,7 @@ from robosuite.environments.base import make
 from robosuite.environments.manipulation.lift import Lift
 from robosuite.environments.manipulation.lift_labsetup1 import LiftLabSetup1
 from robosuite.environments.manipulation.stack import Stack
+from robosuite.environments.manipulation.stack_labsetup1 import StackLabSetup1
 from robosuite.environments.manipulation.nut_assembly import NutAssembly
 from robosuite.environments.manipulation.pick_place import PickPlace
 from robosuite.environments.manipulation.door import Door

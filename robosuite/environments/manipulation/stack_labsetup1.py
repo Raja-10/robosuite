@@ -2,6 +2,7 @@ import numpy as np
 
 from robosuite.environments.manipulation.stack import Stack
 from robosuite.models.arenas import LabWoodTableArena
+from robosuite.models.arenas.lab_wood_table_arena import add_d435_camera
 
 # Table dimensions (L=x/vertical-depth, W=y/horizontal-width, H=thickness), in meters --
 # matches LiftLabSetup1 exactly, since it's the same physical lab table.
@@ -72,3 +73,4 @@ class StackLabSetup1(Stack):
         self.table_offset = TABLE_OFFSET
         super()._load_model()
         self.robots[0].robot_model.set_base_xpos(NERO7_BASE_POS)
+        add_d435_camera(self.robots[0].robot_model)

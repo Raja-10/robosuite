@@ -17,8 +17,10 @@ branch `nero_sim`, and how to run it.
   the same table/robot/camera setup, but with two matching 4cm dark-grey cubes
   (cubeA/cubeB) for a pick-and-stack task instead of Lift's single cube.
 - **Camera**: `"d435"`, a fixed camera modeled after an Intel RealSense D435's RGB
-  FOV (42.5deg vertical), mounted 30cm in from the table's near edge and 15cm in
-  from its left edge, 55cm above the table surface, pointed at the table center.
+  FOV (42.5deg vertical), attached to the robot base in a world-aligned frame (the real base frame; the sim
+  `base_link` is yawed 180deg) at the real camera's
+  hand-eye-calibrated pose (`T_BASE_D435` in
+  `robosuite/models/arenas/lab_wood_table_arena.py`, OpenCV optical convention).
 
 ## Commands
 

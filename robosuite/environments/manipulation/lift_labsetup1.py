@@ -2,6 +2,7 @@ import numpy as np
 
 from robosuite.environments.manipulation.lift import Lift
 from robosuite.models.arenas import LabWoodTableArena
+from robosuite.models.arenas.lab_wood_table_arena import add_d435_camera
 
 # Table dimensions (L=x/vertical-depth, W=y/horizontal-width, H=thickness), in meters.
 TABLE_FULL_SIZE = (0.76, 1.34, 0.05)
@@ -69,3 +70,4 @@ class LiftLabSetup1(Lift):
         self.table_offset = TABLE_OFFSET
         super()._load_model()
         self.robots[0].robot_model.set_base_xpos(NERO7_BASE_POS)
+        add_d435_camera(self.robots[0].robot_model)
